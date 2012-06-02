@@ -16,7 +16,6 @@ init({_Any, http}, Req, _Opts) ->
 	end.
 
 websocket_init(_Any, Req, [{service,list}]) ->
-    io:format("Init LIST~n"),
     bigwig_pubsubhub:register_client(self()),
 	Req2 = cowboy_http_req:compact(Req),
 	{ok, Req2, #state{race=undefined,player=undefined}, hibernate};
