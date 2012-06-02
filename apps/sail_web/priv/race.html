@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <title>Sample Page</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.css">
+    <style type="text/css" media="screen">
+    canvas, img { display:block; margin:0; border:0; }
+    canvas { background:url(/static/img/map.jpg) }
+
+    #wrapper {
+        position: relative;
+        border: 1px solid #9C9898;
+        width: 500px;
+        height: 500px;
+    }
+
+    #buttonWrapper {
+                position: absolute;
+                width: 30px;
+                top: 2px;
+                right: 2px;
+    }
+
+    input[type = "button"] {
+                padding: 5px;
+                width: 30px;
+                margin: 0px 0px 2px 0px;
+    }
+
+    </style>
+    <script type="text/javascript" src="/static/js/websocket.js"></script>
+</head>
+<!--body onload="connect(path,myonmessage);"-->
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1 id="title"></h1>
+        </div>
+        <div class="row">
+        <div class="span3">
+            Connected:
+            <ul id="mylist" class="nav nav-tabs nav-stacked">
+            </ul>
+            <form action="javascript:join();">
+            Name:<input type="text" id="name"/><input type="submit" value="Join"/>
+            </form>
+        </div>
+        <div class="span6">
+            <div id="wrapper">
+                <canvas id="my_canvas" width="500" height="500">
+                    Fallback content here
+                </canvas>
+                <div id="buttonWrapper">
+                    <input type="button" id="plus" value="+"><input type="button" id="minus" value="-">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span6 offset4">
+            <button type="button"  class="btn btn-danger" onclick="steer(-10)"><i class="icon-hand-left icon-white"></i>&nbsp;Left</button>
+            <button type="button"  class="btn btn-success" onclick="steer(10)">Right&nbsp;<i class="icon-hand-right icon-white"></i></button>
+        </div>        
+    </div>
+</div> 
+<!--
+    <div class="top">    
+        <div class="left">
+            <canvas id="my_canvas" width="500" height="500">
+                Fallback content here
+            </canvas>
+        </div>
+        <div class="right">
+            <div class="page-header">
+                <h1 id="title"></h1>
+            </div>
+            <div class="ctrl-group">
+                Connected:
+                <ul id="mylist" class="nav nav-tabs nav-stacked">
+                </ul>
+                <form action="javascript:join();">
+                Name:<input type="text" id="name"/><input type="submit" value="Join"/>
+                </form>
+            </div>
+        </div>
+    </div>
+-->
+ </body>
+<script type="text/javascript">
+console.log("START"); 
+var colors=[
+"#00ffff", "#000000", "#0000ff", "#ff00ff",
+"#008000", "#808080", "#00ff00", "#800000",
+"#000080", "#808000", "#800080", "#ff0000",
+"#c0c0c0", "#008080", "#ffffff", "#ffff00"];
+
+var scale = 1.0;
+var scaleMultiplier = 0.8;
+var startDragOffset = {};
+var mouseDown = false;
+var translatePos = {
+    x: 250,
+    y: 250
+};
+
+var boats=[];
+
+var pathArray = window.location.pathname.split( '/' );
+var race = pathArray[pathArray.length-1];
+
+function addStatus(text){
+	var date = new Date();
+//	document.getElementById('status').innerHTML
+//		= document.getElementById('status').innerHTML
+//		+ date + ": " + text + "<br/>";
+    console.log( date + ":" + text);
+}
+
+function join(){
+	var name = document.getElementById('name').value;
+    ws.send("JOIN"+name);
+
+}
+
+function steer(angle){
+    ws.send("STEER"+angle);
+}
+
+function updateList(boats){
+	var ul = document.getElementById('mylist');
+    ul.innerHTML = "";
+    for ( var i in boats ){
+        var newElement = document.createElement('li');
+        var newLink = document.createElement('a');
+        newLink.setAttribute('href','/race/'+boats[i].name);
+        newLink.innerHTML='<font color="'+colors[i]+'">'+boats[i].name+'</font>';
+        newElement.appendChild(newLink);
+        ul.insertBefore(newElement,ul.firstChild);
+    }
+}
+
+function draw(){
+    var canvas = document.getElementById('my_canvas');
+    if (canvas.getContext){
+        var context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.strokeStyle = "#000000";
+
+        context.save();
+        context.scale(scale, scale);
+        context.translate(translatePos.x, translatePos.y);
+
+        for ( var i in boats ){
+            context.fillStyle = colors[i];
+            context.beginPath();
+            context.arc(boats[i].xpos,boats[i].ypos,10,0,Math.PI*2,true);
+            context.closePath();
+            context.stroke();
+            context.fill();
+        }
+
+        context.restore();
+    }
+}
+
+function myonmessage(evt) {
+			var receivedMsg = evt.data; 
+            if (evt.data.charAt(0)=='[') {
+                    boats = eval("("+evt.data+")");
+                    draw();    
+                    updateList(eval("("+evt.data+")"));
+                }
+                addStatus(evt.data);
+}
+
+document.getElementById("plus").addEventListener("click", function(){
+        scale /= scaleMultiplier;
+        draw();
+            //        draw(scale, translatePos);
+                }, false);
+                
+document.getElementById("minus").addEventListener("click", function(){
+        scale *= scaleMultiplier;
+        draw();
+              //      draw(scale, translatePos);
+                }, false);
+
+document.getElementById('my_canvas').addEventListener("mousedown", function(evt){
+                    mouseDown = true;
+                    startDragOffset.x = evt.clientX - translatePos.x;
+                    startDragOffset.y = evt.clientY - translatePos.y;
+                });
+
+document.getElementById('my_canvas').addEventListener("mouseup", function(evt){
+    mouseDown = false;
+});
+
+document.getElementById('my_canvas').addEventListener("mouseover", function(evt){
+    mouseDown = false;
+});
+
+document.getElementById('my_canvas').addEventListener("mouseout", function(evt){
+    mouseDown = false;
+});
+
+document.getElementById('my_canvas').addEventListener("mousemove", function(evt){
+    if (mouseDown) {
+        translatePos.x = evt.clientX - startDragOffset.x;
+        translatePos.y = evt.clientY - startDragOffset.y;
+        draw();
+//        draw(scale, translatePos);
+    }
+});
+
+connect('race/'+race,myonmessage);
+document.getElementById('title').innerHTML = race;
+</script>
+</html>
+

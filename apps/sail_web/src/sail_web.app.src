@@ -1,0 +1,17 @@
+{application, sail_web,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  crypto,
+                  public_key,
+                  ssl,
+                  cowboy,
+                  sail_server
+                 ]},
+  {mod, { sail_web_app, []}},
+  {env, []}
+ ]}.

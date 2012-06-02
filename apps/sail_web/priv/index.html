@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <title>Sample Page</title>
+    <style></style>
+    <script type="text/javascript" src="/static/js/websocket.js"></script>
+</head>
+<body>
+    <div id="status"></div>
+    <ul id="mylist">
+    </ul>
+    <form action="javascript:createField();">
+    Name:<input type="text" id="name"/><input type="submit" value="Create"/>
+    </form>
+    <script>
+    </script>
+  </body>
+<script type="text/javascript">
+
+function addStatus(text){
+	var date = new Date();
+//	document.getElementById('status').innerHTML
+//		= document.getElementById('status').innerHTML
+//		+ date + ": " + text + "<br/>";
+    console.log( date + ":" + text);
+}
+
+function updateRace(listOfRaces){
+	var ul = document.getElementById('mylist');
+    ul.innerHTML = "";
+    for ( var race in listOfRaces ){
+        var newElement = document.createElement('li');
+        var newLink = document.createElement('a');
+        newLink.setAttribute('href','/race/'+listOfRaces[race]);
+        newLink.innerHTML=listOfRaces[race];
+        newElement.appendChild(newLink);
+        ul.insertBefore(newElement,ul.firstChild);
+    }
+}
+
+function addField(data){
+}
+
+function createField(){
+	var name = document.getElementById('name').value;
+    ws.send("CREATE"+name);
+}
+
+function myonmessage(evt) {
+			var receivedMsg = evt.data; 
+                if (evt.data.charAt(0)=='[') updateRace(eval("("+evt.data+")"))    
+                addStatus(evt.data);
+		};
+
+connect('list',myonmessage, function(evt){ ws.send('LIST');});
+</script>
+</html>
+
