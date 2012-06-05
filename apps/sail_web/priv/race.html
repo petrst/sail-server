@@ -95,13 +95,21 @@ var colors=[
 "#000080", "#808000", "#800080", "#ff0000",
 "#c0c0c0", "#008080", "#ffffff", "#ffff00"];
 
+
+var CANVAS_WIDTH=500;
+var CANVAS_HEIGHT=500;
+var AREA_WIDTH=2000;
+var AREA_HEIGHT=2000;
+var TILE_SIZE=50;
+
+var MAX_SCALE=5.0;
 var scale = 1.0;
 var scaleMultiplier = 0.8;
 var startDragOffset = {};
 var mouseDown = false;
 var translatePos = {
-    x: 250,
-    y: 250
+    x: 0,
+    y: 0
 };
 
 var boats=[];
@@ -140,17 +148,60 @@ function updateList(boats){
     }
 }
 
+
+function drawTile(context,i,j){
+    context.fillStyle = "#B0B0B0";
+    context.fillRect(0,0,50,50);
+    context.strokeStyle = "#909090";
+    context.save();
+    context.translate(TILE_SIZE/2,TILE_SIZE/2);
+    context.rotate(6.28 / 30 );
+    context.beginPath();
+    context.moveTo(-15,0);
+    context.lineTo(15,0);
+    context.lineTo(5,-5);
+    context.moveTo(15,0);
+    context.lineTo(5,5);
+    context.stroke();
+    context.restore();
+    context.fillStyle = "black";
+    context.font = "bold 10px sans-serif";
+    context.textBaseline = "top";
+    context.fillText(i+"x"+j, 0, 0);
+}
+
+
+function drawSea(context,x,y, width, height){
+        context.lineWidth=1;
+
+        var leftmostTile=Math.max(0,Math.floor(-1*translatePos.x / TILE_SIZE));
+        var topmostTile =Math.max(0,Math.floor(-1*translatePos.y / TILE_SIZE));
+        var rightmostTile=Math.min(leftmostTile + width / TILE_SIZE, AREA_WIDTH / TILE_SIZE);
+        var bottommostTile=Math.min(topmostTile + height / TILE_SIZE, AREA_HEIGHT / TILE_SIZE);
+
+        for ( var i=leftmostTile; i <= rightmostTile ; i++ ){
+            for ( var j=topmostTile ; j <= bottommostTile ; j++ ){
+                context.save();
+                context.translate(i*TILE_SIZE,j*TILE_SIZE);
+                drawTile(context,i,j);
+                context.restore();
+            }
+        }
+}
+
 function draw(){
     var canvas = document.getElementById('my_canvas');
     if (canvas.getContext){
         var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        //context.clearRect(0, 0, canvas.width, canvas.height);
+        context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         context.strokeStyle = "#000000";
 
         context.save();
         context.scale(scale, scale);
         context.translate(translatePos.x, translatePos.y);
 
+        drawSea(context, translatePos.x, translatePos.y, CANVAS_WIDTH/scale, CANVAS_HEIGHT/scale);
         for ( var i in boats ){
             context.fillStyle = colors[i];
             context.beginPath();
@@ -175,15 +226,17 @@ function myonmessage(evt) {
 }
 
 document.getElementById("plus").addEventListener("click", function(){
-        scale /= scaleMultiplier;
-        draw();
-            //        draw(scale, translatePos);
+        if ( scale < MAX_SCALE ){
+            scale /= scaleMultiplier;
+            draw();
+        }
                 }, false);
                 
 document.getElementById("minus").addEventListener("click", function(){
+        if (scale>CANVAS_HEIGHT/AREA_HEIGHT){
         scale *= scaleMultiplier;
         draw();
-              //      draw(scale, translatePos);
+        }
                 }, false);
 
 document.getElementById('my_canvas').addEventListener("mousedown", function(evt){
@@ -205,12 +258,25 @@ document.getElementById('my_canvas').addEventListener("mouseout", function(evt){
 });
 
 document.getElementById('my_canvas').addEventListener("mousemove", function(evt){
-    if (mouseDown) {
-        translatePos.x = evt.clientX - startDragOffset.x;
-        translatePos.y = evt.clientY - startDragOffset.y;
-        draw();
-//        draw(scale, translatePos);
-    }
+        var change = false;
+        if ( mouseDown ){
+            var newtranslatePosX = evt.clientX - startDragOffset.x;
+            var newtranslatePosY = evt.clientY - startDragOffset.y;
+
+            if ( newtranslatePosX > 0 ) newtranslatePosX=0;
+            if ( newtranslatePosY > 0 ) newtranslatePosY=0;
+
+            if (  newtranslatePosX < 0 &&  (( AREA_WIDTH - CANVAS_WIDTH ) > Math.abs( newtranslatePosX))){
+                translatePos.x = newtranslatePosX;
+                change = true;
+            }
+
+            if ( newtranslatePosY < 0 && ((AREA_HEIGHT - CANVAS_HEIGHT ) > Math.abs( newtranslatePosY))) {
+                translatePos.y = newtranslatePosY;
+                change = true;
+            }
+            if ( change ) draw();
+      }
 });
 
 connect('race/'+race,myonmessage);
