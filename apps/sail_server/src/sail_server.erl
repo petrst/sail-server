@@ -6,6 +6,7 @@ terminate/2, code_change/3, start_link/1, stop/1, connect/2,disconnect/2, status
 
 -define(FPS,1).
 -define(BOATMODEL,boat).
+-define(WEATHERMODEL, weather).
 
 start_link(Name)->
     gen_server:start_link({local,Name},?MODULE, [Name], []).
@@ -29,12 +30,12 @@ status(Name)->
 
 
 init([Name])->
-    % Weather = weather:start(),
+    Weather = ?WEATHERMODEL:create_weather_field(40*40),
     Fleet   = [],
 	% Run timer	
     {ok,Timer}=timer:apply_interval(1000,gen_server,call,[Name,tick]),
     io:format("sail_server ~p was started~n",[Name]),
-    {ok,{weather,Fleet}}.
+    {ok,{Weather,Fleet}}.
 
 
 loop()->

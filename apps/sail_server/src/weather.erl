@@ -28,6 +28,17 @@ loop(State)->
     end.
                 
 
+create_weather_cell(Force,Angle)->
+    <<Force:4, Angle:4>>.
+
+create_weather_field(GridSize)->
+    create_weather_field(GridSize,<<>>).
+create_weather_field(0,Acc)->
+    Acc;
+create_weather_field(Cells,Acc)->
+    Cell =  create_weather_cell(5,10),
+    create_weather_field(Cells-1, << Cell/binary, Acc/binary>>).
+
 tick(State)->
     State.
 

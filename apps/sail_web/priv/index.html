@@ -48,7 +48,8 @@ function createField(){
 }
 
 function myonmessage(evt) {
-			var receivedMsg = evt.data; 
+    var receivedMsg = evt.data; 
+    console.log(evt.data);
                 if (evt.data.charAt(0)=='[') updateRace(eval("("+evt.data+")"))    
                 addStatus(evt.data);
 		};

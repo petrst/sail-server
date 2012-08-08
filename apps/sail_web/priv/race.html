@@ -113,6 +113,7 @@ var translatePos = {
     y: 0
 };
 
+var cachedState={};
 var boats=[];
 
 var pathArray = window.location.pathname.split( '/' );
@@ -136,19 +137,23 @@ function steer(angle){
     ws.send("STEER"+angle);
 }
 
-function updateList(boats){
+function updateList(state){
 	var ul = document.getElementById('mylist');
     ul.innerHTML = "";
-    for ( var i in boats ){
+    for ( var i in state.fleet ){
         var newElement = document.createElement('li');
         var newLink = document.createElement('a');
-        newLink.setAttribute('href','/race/'+boats[i].name);
-        newLink.innerHTML='<font color="'+colors[i]+'">'+boats[i].name+'</font>';
+        newLink.setAttribute('href','/race/'+state.fleet[i].name);
+        newLink.innerHTML='<font color="'+colors[i]+'">'+state.fleet[i].name+'</font>';
         newElement.appendChild(newLink);
         ul.insertBefore(newElement,ul.firstChild);
     }
 }
 
+
+function getWeatherAt(i,j){
+    return cachedState.weather.substring((i*AREA_HEIGHT/TILE_SIZE+j)*2,(i*AREA_HEIGHT/TILE_SIZE+j)*2+2);
+}
 
 function drawTile(context,i,j){
     context.fillStyle = "#B0B0B0";
@@ -169,6 +174,8 @@ function drawTile(context,i,j){
     context.font = "bold 10px sans-serif";
     context.textBaseline = "top";
     context.fillText(i+"x"+j, 0, 0);
+    //context.fillText(getWeatherAt(i,j),0,40);
+
 }
 
 
@@ -255,13 +262,20 @@ function verifyAndSetOffset(x,y){
 }
 
 function myonmessage(evt) {
-			var receivedMsg = evt.data; 
-            if (evt.data.charAt(0)=='[') {
-                    boats = eval("("+evt.data+")");
+    var receivedMsg = evt.data; 
+    console.log(evt.data);
+    if (evt.data instanceof Blob) {
+        console.log(evt.data.parts);
+    } else {
+        if (evt.data.charAt(0)=='{') {
+            var state = eval("("+evt.data+")");
+            if (state.weather != undefined ){cachedState = state}
+            boats = state.fleet;
                     draw();    
                     updateList(eval("("+evt.data+")"));
                 }
-                addStatus(evt.data);
+            addStatus(evt.data);
+    }
 }
 
 document.getElementById("plus").addEventListener("click", function(){
@@ -331,7 +345,7 @@ document.getElementById('my_canvas').addEventListener("mousemove", function(evt)
       }
 });
 
-connect('race/'+race,myonmessage);
+connect('race/'+race,myonmessage,function(){ws.send('HELLO')});
 document.getElementById('title').innerHTML = race;
 </script>
 </html>

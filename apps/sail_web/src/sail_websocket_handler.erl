@@ -26,6 +26,12 @@ websocket_init(_Any, Req, [{service,race}]) ->
 	Req2 = cowboy_http_req:compact(Req),
 	{ok, Req2, #state{race=binary_to_atom(RaceName,utf8)}, hibernate}.
 
+websocket_handle({text, <<"HELLO">>}, Req, State=#state{race=Race}) ->
+    {Weather,Fleet} = sail_server:status(Race),
+    Rep1 = list_to_binary(bin_to_hexstr(Weather)),
+    Rep2 = list_to_binary(to_json(Fleet,[])),
+	{reply, {text, <<${,"weather:",$",Rep1/binary,$",",fleet:",Rep2/binary,$}>>}, Req, State, hibernate};
+
 websocket_handle({text, <<"LIST">>}, Req, State) ->
     Fields = sail_server_app:list(),
     Rep = jsx:term_to_json(Fields),
@@ -37,7 +43,7 @@ websocket_handle({text, <<"CREATE",Name/binary>>}, Req, State) ->
 
 websocket_handle({text, <<"JOIN",Name/binary>>}, Req,State=#state{race=Race}) ->
     Player = binary_to_atom(Name,utf8),
-    sail_server:connect(Race, Player),
+    ok=sail_server:connect(Race, Player),
 	{reply, {text, << "You joined: ", Name/binary >>}, Req, State#state{player=Player}, hibernate};
 
 websocket_handle({text, <<"STEER",Angle/binary>>}, Req,State=#state{race=Race,player=Player}) ->
@@ -46,14 +52,15 @@ websocket_handle({text, <<"STEER",Angle/binary>>}, Req,State=#state{race=Race,pl
 
 
 websocket_handle({text, <<"UPDATE",_Name/binary>>}, Req, State=#state{race=Race}) ->
-    {_W,Fleet} = sail_server:status(Race),
+    {_Weather,Fleet} = sail_server:status(Race),
     Rep = list_to_binary(to_json(Fleet,[])),
-	{reply, {text, <<Rep/binary>>}, Req, State, hibernate};
+	{reply, {text, <<${,"fleet:",Rep,$}>>}, Req, State, hibernate};
 
 websocket_handle({text, Msg}, Req, State) ->
 	{reply, {text, << "You said: ", Msg/binary >>}, Req, State, hibernate};
 
 websocket_handle(_Any, Req, State) ->
+    io:format("UNHANDLED"),
 	{ok, Req, State}.
 
 to_json([],Acc)->
@@ -65,6 +72,11 @@ to_json([{Name,Boat}|Rest],Acc)->
     BString=io_lib:format("{name:\"~p\",xpos:~p,ypos:~p},",[Name,Boat#boat.xpos,Boat#boat.ypos]),
     to_json(Rest,Acc++BString).
 
+    
+bin_to_hexstr(Bin) ->
+  lists:flatten([io_lib:format("~2.16.0B", [X]) || X <- binary_to_list(Bin)]).
+
+
 websocket_info({bigwig,Msg}, Req, State) ->
     io:format("PUBSUBHUB: ~p~n",[Msg]),
     Fields = sail_server_app:list(),
@@ -73,11 +85,12 @@ websocket_info({bigwig,Msg}, Req, State) ->
 	%{ok, Req, State, hibernate};
 
 websocket_info(tick, Req, State=#state{race=Race}) ->
-    {_W,Fleet} = sail_server:status(Race),
+    {_Weather,Fleet} = sail_server:status(Race),
+    Ws = bin_to_hexstr(_Weather),
     %Rep = list_to_binary(io_lib:format("~p",[_Fleet])),
     Rep = list_to_binary(to_json(Fleet,[])),
     % io:format("Sending from ~p~n",[self()]),
-	{reply, {text, Rep}, Req, State, hibernate};
+	{reply, {text, <<${,"fleet:",Rep/binary,$}>>}, Req, State, hibernate};
 websocket_info(_Info, Req, State) ->
 	{ok, Req, State, hibernate}.
 
