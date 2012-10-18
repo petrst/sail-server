@@ -42,7 +42,7 @@
             Connected:
             <ul id="mylist" class="nav nav-tabs nav-stacked">
             </ul>
-            <form action="javascript:join();">
+            <form id="joinform" action="javascript:join();">
             Name:<input type="text" id="name"/><input type="submit" value="Join"/>
             </form>
         </div>
@@ -128,13 +128,14 @@ function addStatus(text){
 }
 
 function join(){
-	var name = document.getElementById('name').value;
+    var name = document.getElementById('name').value;
     ws.send("JOIN"+name);
-
+    document.getElementById('joinform').style.display = 'none';
 }
 
 function steer(angle){
     ws.send("STEER"+angle);
+   // ws.send("MESG{john,\"Hello, John!\"}");
 }
 
 function updateList(state){
@@ -144,6 +145,7 @@ function updateList(state){
         var newElement = document.createElement('li');
         var newLink = document.createElement('a');
         newLink.setAttribute('href','/race/'+state.fleet[i].name);
+
         newLink.innerHTML='<font color="'+colors[i]+'">'+state.fleet[i].name+'</font>';
         newElement.appendChild(newLink);
         ul.insertBefore(newElement,ul.firstChild);
@@ -152,16 +154,26 @@ function updateList(state){
 
 
 function getWeatherAt(i,j){
-    return cachedState.weather.substring((i*AREA_HEIGHT/TILE_SIZE+j)*2,(i*AREA_HEIGHT/TILE_SIZE+j)*2+2);
+    var weatherCode = cachedState.weather.substring((i*AREA_HEIGHT/TILE_SIZE+j)*2,(i*AREA_HEIGHT/TILE_SIZE+j)*2+2);
+    var force = parseInt(weatherCode.substring(0,1),16);
+    var angle = 6.28 * parseInt(weatherCode.substring(1,2),16) / 16;
+    return { "force": force , "angle": angle }; 
 }
+
+
+
 
 function drawTile(context,i,j){
     context.fillStyle = "#B0B0B0";
     context.fillRect(0,0,50,50);
     context.strokeStyle = "#909090";
+
+
+    // Draw weather arrow
     context.save();
     context.translate(TILE_SIZE/2,TILE_SIZE/2);
-    context.rotate(6.28 / 30 );
+    context.rotate( getWeatherAt(i,j).angle );
+    //context.rotate(6.28 / 30 );
     context.beginPath();
     context.moveTo(-15,0);
     context.lineTo(15,0);
@@ -170,11 +182,13 @@ function drawTile(context,i,j){
     context.lineTo(5,5);
     context.stroke();
     context.restore();
+
+    // Draw x,y text
     context.fillStyle = "black";
     context.font = "bold 10px sans-serif";
     context.textBaseline = "top";
     context.fillText(i+"x"+j, 0, 0);
-    //context.fillText(getWeatherAt(i,j),0,40);
+    //context.fillText(getWeatherAt(i,j),0,-40);
 
 }
 

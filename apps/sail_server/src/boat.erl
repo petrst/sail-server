@@ -22,7 +22,7 @@ steer(Boat=#boat{xvel=VX,yvel=VY},Angle)->
     Boat#boat{xvel=NewXvel, yvel = NewYvel}.
 
 update_position(_Weather, #boat{xpos=X,ypos=Y,xvel=VX,yvel=VY})->
-    NewPos = #boat{xpos=trunc(X+VX) rem 500,ypos=trunc(Y+VY) rem 500,xvel=VX,yvel=VY},
+    NewPos = #boat{xpos=trunc(X+VX),ypos=trunc(Y+VY),xvel=VX,yvel=VY},
     %io:format("New position = ~p~n",[NewPos]),
     NewPos.
 

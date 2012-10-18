@@ -37,14 +37,29 @@ websocket_handle({text, <<"LIST">>}, Req, State) ->
     Rep = jsx:term_to_json(Fields),
 	{reply, {text, <<Rep/binary>>}, Req, State, hibernate};
 
+websocket_handle({text,<<"MESG",Msg/binary >>},Req, State=#state{player=Player})->
+    {To,Message} = binary_to_term(Msg),
+    io:format("Sending text ~p to ~p~n",[Message,To]);
+
 websocket_handle({text, <<"CREATE",Name/binary>>}, Req, State) ->
     sail_server_app:create(binary_to_atom(Name,utf8)),
-	{reply, {text, << "You created: ", Name/binary >>}, Req, State, hibernate};
+	%%{reply, {text, << "You created: ", Name/binary >>}, Req, State, hibernate};
+    Fields = sail_server_app:list(),
+    Rep = jsx:term_to_json(Fields),
+	{reply, {text, <<Rep/binary>>}, Req, State, hibernate};
 
-websocket_handle({text, <<"JOIN",Name/binary>>}, Req,State=#state{race=Race}) ->
+
+
+
+websocket_handle({text, <<"JOIN",Name/binary>>}, Req,State=#state{race=Race,player=undefined}) ->
     Player = binary_to_atom(Name,utf8),
     ok=sail_server:connect(Race, Player),
 	{reply, {text, << "You joined: ", Name/binary >>}, Req, State#state{player=Player}, hibernate};
+
+websocket_handle({text, <<"JOIN",Name/binary>>}, Req, State=#state{race=Race,player=Player}) ->
+    io:format("Joining process: ~p~n",[self()]),
+    {reply, {text, << "Already connected" >>}, Req, State, hibernate};
+
 
 websocket_handle({text, <<"STEER",Angle/binary>>}, Req,State=#state{race=Race,player=Player}) ->
     sail_server:steer(Race,Player,list_to_integer(binary_to_list(Angle))),
@@ -76,6 +91,13 @@ to_json([{Name,Boat}|Rest],Acc)->
 bin_to_hexstr(Bin) ->
   lists:flatten([io_lib:format("~2.16.0B", [X]) || X <- binary_to_list(Bin)]).
 
+  
+  player_to_json(undefined)->
+    "undefined";
+player_to_json(Name)->
+    atom_to_binary(Name,latin1).
+
+
 
 websocket_info({bigwig,Msg}, Req, State) ->
     io:format("PUBSUBHUB: ~p~n",[Msg]),
@@ -84,13 +106,16 @@ websocket_info({bigwig,Msg}, Req, State) ->
 	{reply, {text, <<Rep/binary>>}, Req, State, hibernate};
 	%{ok, Req, State, hibernate};
 
-websocket_info(tick, Req, State=#state{race=Race}) ->
+
+websocket_info(tick, Req, State=#state{race=Race, player=Player}) ->
     {_Weather,Fleet} = sail_server:status(Race),
     Ws = bin_to_hexstr(_Weather),
     %Rep = list_to_binary(io_lib:format("~p",[_Fleet])),
     Rep = list_to_binary(to_json(Fleet,[])),
     % io:format("Sending from ~p~n",[self()]),
-	{reply, {text, <<${,"fleet:",Rep/binary,$}>>}, Req, State, hibernate};
+
+    PlayerName = atom_to_binary(Player,latin1),
+	{reply, {text, <<${, "player:", $", PlayerName/binary, $", $, ,"fleet:",Rep/binary,$}>>}, Req, State, hibernate};
 websocket_info(_Info, Req, State) ->
 	{ok, Req, State, hibernate}.
 

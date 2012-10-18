@@ -39,6 +39,14 @@ create_weather_field(Cells,Acc)->
     Cell =  create_weather_cell(5,10),
     create_weather_field(Cells-1, << Cell/binary, Acc/binary>>).
 
+
+update_cell(WeatherField, CellId ,{Force,Angle})->
+    <<W1:CellId/binary,OldW:8,W2/binary>> = WeatherField,
+    NewW = create_weather_cell(Force,Angle),
+    <<W1/binary, NewW/binary, W2/binary>>.
+    
+
+
 tick(State)->
     State.
 

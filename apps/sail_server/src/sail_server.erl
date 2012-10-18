@@ -1,12 +1,14 @@
 -module(sail_server).
 -behaviour(gen_server).
 -include("boat.hrl").
--export([init/1, handle_call/3, handle_info/2,steer/3,
+-export([init/1, handle_call/3, handle_info/2,steer/3,iupdate_weather/2,
 terminate/2, code_change/3, start_link/1, stop/1, connect/2,disconnect/2, status/1]).
 
 -define(FPS,1).
 -define(BOATMODEL,boat).
 -define(WEATHERMODEL, weather).
+-define(MAX_X,500).
+-define(MAX_Y,500).
 
 start_link(Name)->
     gen_server:start_link({local,Name},?MODULE, [Name], []).
@@ -62,10 +64,13 @@ handle_call({steer,Name, Angle},_From, {_Weather, Fleet})->
                  {reply,ok, {_Weather, lists:keyreplace(Name,1,Fleet, {Name,NewBoat})}}
     end;
             
+handle_call({update_weather,NewWeather},_From, {_Weather, Fleet})->
+    {reply,ok,{NewWeather, Fleet}};
+
 handle_call({connect,Name}, _From, {_Weather,Fleet})->
     case lists:keymember(Name,1,Fleet) of
         false -> 
-            NewFleet = lists:append( Fleet, [{ Name, ?BOATMODEL:new(0,0,1.0,1.0) }]),
+            NewFleet = lists:append( Fleet, [{ Name, ?BOATMODEL:new(100,100,1.0,1.0) }]),
             {reply, ok, {_Weather, NewFleet}};
         true -> {reply, err_connected, {_Weather,Fleet}}
     end;
@@ -98,6 +103,19 @@ code_change(_OldVsn, N, _Extra) -> {ok, N}.
 update_weather(State)->
     State.
 
+iupdate_weather(Name,NewWeather)->
+    gen_server:call(Name,{update_weather,NewWeather}).
+
+
+
+%% Wrap the position of boats "out o range"
+%% Our world is round too!!!
+wrap_pos([],NewFleet)->
+    NewFleet;
+wrap_pos([{Name,#boat{xpos=XPos,ypos=YPos}=Boat} | RestOfFleet], NewFleet) ->
+    wrap_pos(RestOfFleet, lists:append(NewFleet,[{Name,Boat#boat{xpos=XPos rem ?MAX_X, ypos=YPos rem ?MAX_Y}}])).
+
 update_fleet({Weather,Fleet})->
     NewFleet = lists:map(fun({Name,Boat}) -> {Name,?BOATMODEL:tick(Weather,Boat)} end,Fleet),
-    {Weather, NewFleet}.
+    NewFleet2 = wrap_pos(NewFleet,[]),
+    {Weather, NewFleet2}.

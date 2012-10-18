@@ -9,8 +9,9 @@ loop(Race,Name,Timeout)->
     receive
         stop -> ok
     after Timeout ->
-        NewBearing = random:uniform(90),
-        NewTimeout = random:uniform(120*1000), % 2 minutes
+        %NewBearing = random:uniform(90),
+        NewBearing = 0,
+        %NewTimeout = random:uniform(120*1000), % 2 minutes
         sail_server:steer(Race,Name,NewBearing),
-        loop(Race,Name,NewTimeout)
+        loop(Race,Name,Timeout)
     end.
