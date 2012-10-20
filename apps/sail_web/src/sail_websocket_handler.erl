@@ -18,13 +18,17 @@ init({_Any, http}, Req, _Opts) ->
 websocket_init(_Any, Req, [{service,list}]) ->
     bigwig_pubsubhub:register_client(self()),
 	Req2 = cowboy_http_req:compact(Req),
+    Player = cowboy_http_req:cookie(<<"player">>,Req),
+    io:format("Cookie ~p~n",[Player]),
 	{ok, Req2, #state{race=undefined,player=undefined}, hibernate};
 
 websocket_init(_Any, Req, [{service,race}]) ->
 	timer:send_interval(1000, tick),
     {RaceName,_}=cowboy_http_req:binding(race,Req),
 	Req2 = cowboy_http_req:compact(Req),
-	{ok, Req2, #state{race=binary_to_atom(RaceName,utf8)}, hibernate}.
+    {Player,Req3} = cowboy_http_req:cookie(<<"player">>,Req),
+    io:format("Cookie ~p~n",[Player]),
+	{ok, Req3, #state{race=binary_to_atom(RaceName,utf8)}, hibernate}.
 
 websocket_handle({text, <<"HELLO">>}, Req, State=#state{race=Race}) ->
     {Weather,Fleet} = sail_server:status(Race),
@@ -92,7 +96,7 @@ bin_to_hexstr(Bin) ->
   lists:flatten([io_lib:format("~2.16.0B", [X]) || X <- binary_to_list(Bin)]).
 
   
-  player_to_json(undefined)->
+player_to_json(undefined)->
     "undefined";
 player_to_json(Name)->
     atom_to_binary(Name,latin1).

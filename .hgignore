@@ -1,4 +1,5 @@
 syntax: glob
 *.beam
+deps/
 apps/sail_web/ebin/sail_web.app
 apps/sail_server/ebin/sail_server.app

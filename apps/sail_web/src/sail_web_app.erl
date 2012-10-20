@@ -22,7 +22,8 @@ start(_Type, _Args) ->
 		{'_', [
 			{[<<"websocket">>,<<"race">>, race], sail_websocket_handler, [{service,race}]},
 			{[<<"websocket">>,<<"list">>], sail_websocket_handler, [{service,list}]},
-			{[<<"race">>,battlefield], static_handler, [<<"race.html">>]},
+			{[<<"race">>,battlefield],  static_handler, [<<"race.html">>]},
+			{[<<"login">>,battlefield], login_handler, [<<"race.html">>]},
 			{[<<"static">>,'...'], static_handler, []}
 		]}
 	],

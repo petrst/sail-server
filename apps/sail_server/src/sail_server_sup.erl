@@ -9,11 +9,13 @@ start_link() ->
 
 
 start_child(Name)->
-    supervisor:start_child(?MODULE, {Name, 
-                                            {sail_server,start_link,[Name]},
+    case supervisor:start_child(?MODULE, {Name, 
+                                            {race_sup,start_link,[Name]},
                                             permanent, brutal_kill,
-                                            worker,dynamic}),
-    bigwig_pubsubhub:notify({new_child,Name}).
+                                            worker,dynamic}) of
+        {ok,_}       -> bigwig_pubsubhub:notify({new_child,Name});
+        {error, Msg} -> io:format("sail_server_sup:start_link(~p) returned ~p~n",[Name,Msg])
+    end.
 
 terminate_child(Name)->
     supervisor:terminate_child(?MODULE,Name),

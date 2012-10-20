@@ -27,23 +27,66 @@
                 width: 30px;
                 margin: 0px 0px 2px 0px;
     }
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+
 
     </style>
     <script type="text/javascript" src="/static/js/websocket.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.js"></script>
+    <script type="text/javascript" src="/static/js/bootstrap.js"></script>
 </head>
 <!--body onload="connect(path,myonmessage);"-->
 <body>
+
+
+
+
     <div class="container">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" id="title" href="#">Project name</a>
+
+          <ul class="nav pull-right">
+              <li class="dropdown">
+                    <a href="#" id="joinButton" class="dropdown-toggle" data-toggle="dropdown" data-target="#">Join<b class="caret"></b></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li>                        
+                            <form id="joinform" action="javascript:join();">
+                            <i class="icon-user"></i>Your name:<br/>
+                            <input type="text" id="player"/>
+                            </form>
+                        </li>
+                    </ul>
+              </li>
+          </ul>
+
+        </div>
+      </div>
+    </div>
+
+
+
+
         <div class="page-header">
-            <h1 id="title"></h1>
+            <h1 id="title2"></h1>
         </div>
         <div class="row">
         <div class="span3">
             Connected:
             <ul id="mylist" class="nav nav-tabs nav-stacked">
             </ul>
-            <form id="joinform" action="javascript:join();">
-            Name:<input type="text" id="name"/><input type="submit" value="Join"/>
+            <form id="joinform" action="/login/uk" method="POST">
+            Name:<input type="text" id="name" name="player"/><input type="submit" value="Join"/>
             </form>
         </div>
         <div class="span6">
@@ -130,7 +173,7 @@ function addStatus(text){
 function join(){
     var name = document.getElementById('name').value;
     ws.send("JOIN"+name);
-    document.getElementById('joinform').style.display = 'none';
+    //document.getElementById('joinform').style.display = 'none';
 }
 
 function steer(angle){
@@ -361,6 +404,7 @@ document.getElementById('my_canvas').addEventListener("mousemove", function(evt)
 
 connect('race/'+race,myonmessage,function(){ws.send('HELLO')});
 document.getElementById('title').innerHTML = race;
+$('.dropdown-toggle').dropdown();
 </script>
 </html>
 

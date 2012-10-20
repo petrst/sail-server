@@ -1,15 +1,22 @@
 -module(sail_server).
 -behaviour(gen_server).
 -include("boat.hrl").
--export([init/1, handle_call/3, handle_info/2,steer/3,iupdate_weather/2,
-terminate/2, code_change/3, start_link/1, stop/1, connect/2,disconnect/2, status/1]).
 
+-export([steer/3,change_weather/2,start_link/1, stop/1, connect/2,disconnect/2, status/1]).
+-export([init/1, handle_call/3, handle_info/2, terminate/2, code_change/3 ]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% CONFIGURATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -define(FPS,1).
 -define(BOATMODEL,boat).
 -define(WEATHERMODEL, weather).
 -define(MAX_X,500).
 -define(MAX_Y,500).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  PUBLIC API 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start_link(Name)->
     gen_server:start_link({local,Name},?MODULE, [Name], []).
 
@@ -27,27 +34,30 @@ steer(Name,Player,Angle)->
     gen_server:call(Name,{steer,Player,Angle}).
 
 
+change_weather(Name,NewWeather)->
+    gen_server:call(Name,{update_weather,NewWeather}).
+
 status(Name)->
     gen_server:call(Name,status).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  GEN_SERVER CALLBACKS 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 init([Name])->
     Weather = ?WEATHERMODEL:create_weather_field(40*40),
     Fleet   = [],
 	% Run timer	
-    {ok,Timer}=timer:apply_interval(1000,gen_server,call,[Name,tick]),
+    %{ok,Timer}=timer:apply_interval(1000,gen_server,call,[Name,tick]),
     io:format("sail_server ~p was started~n",[Name]),
     {ok,{Weather,Fleet}}.
 
 
-loop()->
-    timer:sleep(1000/?FPS),
-    gen_server:call(?MODULE,tick),
-    loop().
-
-
 %% Main server routine - clock tick, updates everything
 handle_call(tick, _From, State)->
+    %io:format("Tick from ~p~n",[_From]),
     NewState1 = update_weather(State),
     NewState2 = update_fleet(NewState1),
 	%io:format("~p~n",[NewState2]),
@@ -99,14 +109,20 @@ terminate(Reason, _State)->
 
 code_change(_OldVsn, N, _Extra) -> {ok, N}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  INTERNAL FUNCTIONS 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 %% No weather evolution implemented
 update_weather(State)->
     State.
 
-iupdate_weather(Name,NewWeather)->
-    gen_server:call(Name,{update_weather,NewWeather}).
 
-
+update_fleet({Weather,Fleet})->
+    NewFleet = lists:map(fun({Name,Boat}) -> {Name,?BOATMODEL:tick(Weather,Boat)} end,Fleet),
+    NewFleet2 = wrap_pos(NewFleet,[]),
+    {Weather, NewFleet2}.
 
 %% Wrap the position of boats "out o range"
 %% Our world is round too!!!
@@ -115,7 +131,4 @@ wrap_pos([],NewFleet)->
 wrap_pos([{Name,#boat{xpos=XPos,ypos=YPos}=Boat} | RestOfFleet], NewFleet) ->
     wrap_pos(RestOfFleet, lists:append(NewFleet,[{Name,Boat#boat{xpos=XPos rem ?MAX_X, ypos=YPos rem ?MAX_Y}}])).
 
-update_fleet({Weather,Fleet})->
-    NewFleet = lists:map(fun({Name,Boat}) -> {Name,?BOATMODEL:tick(Weather,Boat)} end,Fleet),
-    NewFleet2 = wrap_pos(NewFleet,[]),
-    {Weather, NewFleet2}.
+
