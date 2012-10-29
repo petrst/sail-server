@@ -14,25 +14,30 @@ init({tcp, http}, Req, []) ->
 init({tcp, http}, Req, OnlyFile) ->
   {ok, Req, OnlyFile}.
 
+
+% Resource URI is in request URI
 handle(Req, undefined_state = State) ->
   {[_|Path], Req2} = cowboy_http_req:path(Req), % strip <<"static">>
-  send(Req2, Path, State);
+  load_and_send(Req2, Path, State);
 
+% Resource URI is in State = Options
 handle(Req, OnlyFile = State) ->
-  send(Req, OnlyFile, State).
+  load_and_send(Req, OnlyFile, State).
 
-send(Req, PathBins, State) ->
-  Path = [ binary_to_list(P) || P <- PathBins ],
-  Extension=tl(filename:extension(Path)),
-  case file(filename:join(Path)) of
-    {ok, Body} ->
-      Headers = [{<<"Content-Type">>, mimetypes:extension(Extension)}],
-      {ok, Req2} = cowboy_http_req:reply(200, Headers, Body, Req),
+load_and_send(Req, PathBins, State) ->
+  Path = filename:join([ binary_to_list(P) || P <- PathBins ]),
+  case  file(Path) of
+    {ok, Mime, Body} ->
+      {ok, Req2} = send(Req,Mime,Body),
       {ok, Req2, State};
     _ ->
       {ok, Req2} = cowboy_http_req:reply(404, [], <<"404'd">>, Req),
       {ok, Req2, State}
   end.
+
+send(Req,Mime,Body) ->
+      Headers = [{<<"Content-Type">>, Mime}],
+      cowboy_http_req:reply(200, Headers, Body, Req).
 
 terminate(_Req, _State) ->
   ok.
@@ -49,10 +54,15 @@ type(Type, Name) ->
 
 file(Path) ->
   Priv = priv(),
-  file:read_file(filename:join(Priv, Path)).
+  {ok,Body} = file:read_file(filename:join(Priv,Path)),
+  Extension=tl(filename:extension(Path)),
+  Mime = mimetypes:extension(Extension),
+  {ok, Mime, Body}.
+
 
 priv() ->
-  case code:priv_dir(sail_web) of
+  {ok,App} = application:get_application(?MODULE),
+  case code:priv_dir(App) of
     {error,_} -> "priv";
     Priv -> Priv
   end.
